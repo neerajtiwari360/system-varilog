@@ -1,6 +1,6 @@
 PROJECT ?= 01_logic_gates
-TOP ?= tb_and_gate
-SYNTH_TOP ?= and_gate
+TOP ?= tb_or_gate
+SYNTH_TOP ?= or_gate
 
 DIR = projects/$(PROJECT)
 RTL = $(wildcard $(DIR)/rtl/*.sv)
