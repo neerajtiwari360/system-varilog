@@ -1,0 +1,5 @@
+build/
+.git/
+*.vcd
+*.vvp
+obj_dir/

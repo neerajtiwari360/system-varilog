@@ -1,0 +1,42 @@
+# =====================================
+# SystemVerilog Lab - Git Ignore
+# =====================================
+
+# Build folders in all projects
+build/
+**/build/
+
+# Simulation outputs
+*.vvp
+*.vcd
+*.fst
+*.lxt
+*.lxt2
+*.vpd
+*.wlf
+
+# Verilator generated files
+obj_dir/
+**/obj_dir/
+
+# Waveform viewer temporary files
+*.vcd.sav
+*.gtkw
+
+# Keep intentionally saved waveform configurations
+!*.gtkw
+
+# Python temporary files
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.tmp
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# VS Code local settings
+.vscode/

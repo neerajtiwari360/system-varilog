@@ -1,0 +1,18 @@
+services:
+  sim:
+    build: .
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: ["bash"]
+
+  wave:
+    build: .
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    environment:
+      PROJECT: ${PROJECT:-01_logic_gates}
+    ports:
+      - "127.0.0.1:6080:6080"
+    command: ["bash", "scripts/view.sh"]
