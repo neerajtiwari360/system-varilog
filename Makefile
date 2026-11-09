@@ -1,11 +1,12 @@
 PROJECT ?= 01_logic_gates
 TOP ?= tb_and_gate
+SYNTH_TOP ?= and_gate
 
 DIR = projects/$(PROJECT)
 RTL = $(wildcard $(DIR)/rtl/*.sv)
 TB = $(DIR)/tb/$(TOP).sv
 
-.PHONY: test lint clean
+.PHONY: test lint synth clean
 
 test:
 	mkdir -p $(DIR)/build
@@ -17,7 +18,12 @@ test:
 	cd $(DIR) && vvp build/sim.vvp
 
 lint:
-	verilator --lint-only -Wall --top-module and_gate $(DIR)/rtl/and_gate.sv
+	verilator --lint-only -Wall \
+		--top-module $(SYNTH_TOP) $(RTL)
+
+synth:
+	mkdir -p $(DIR)/build
+	yosys -p "read_verilog -sv $(RTL); synth -top $(SYNTH_TOP); stat; write_verilog -noattr $(DIR)/build/netlist.v; show -format svg -prefix $(DIR)/build/schematic"
 
 clean:
 	rm -rf $(DIR)/build/*
