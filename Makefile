@@ -1,12 +1,15 @@
 PROJECT ?= 01_logic_gates
-TOP ?= tb_and_gate
-SYNTH_TOP ?= and_gate
+TOP ?= tb_registered_io_and
+SYNTH_TOP ?= $(patsubst tb_%,%,$(TOP))
 
 DIR = projects/$(PROJECT)
 RTL = $(wildcard $(DIR)/rtl/*.sv)
 TB = $(DIR)/tb/$(TOP).sv
 
-.PHONY: test lint synth clean
+.PHONY: test run lint synth clean
+
+# Simulate (including VCD generation) and synthesize the same design.
+run: test synth
 
 test:
 	mkdir -p $(DIR)/build
@@ -23,7 +26,7 @@ lint:
 
 synth:
 	mkdir -p $(DIR)/build
-	yosys -p "read_verilog -sv $(RTL); synth -top $(SYNTH_TOP); stat; write_verilog -noattr $(DIR)/build/netlist.v; show -format svg -prefix $(DIR)/build/schematic"
+	yosys -l $(DIR)/build/$(SYNTH_TOP)_synth.log -p "read_verilog -sv $(RTL); synth -top $(SYNTH_TOP); stat; write_verilog -noattr $(DIR)/build/$(SYNTH_TOP)_netlist.v; show -format svg -prefix $(DIR)/build/$(SYNTH_TOP)_schematic $(SYNTH_TOP)"
 
 clean:
 	rm -rf $(DIR)/build/*

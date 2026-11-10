@@ -13,6 +13,7 @@ services:
       - .:/workspace
     environment:
       PROJECT: ${PROJECT:-01_logic_gates}
+      WAVE_FILE: ${WAVE_FILE:-}
     ports:
       - "127.0.0.1:6080:6080"
     command: ["bash", "scripts/view.sh"]
