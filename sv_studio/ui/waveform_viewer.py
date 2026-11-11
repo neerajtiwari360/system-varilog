@@ -39,7 +39,8 @@ class WaveformViewer:
                 ui.label('Add $dumpfile and $dumpvars to the testbench, then run Simulation again.')
                 return
             with ui.element('div').classes('native-wave-heading'):
-                ui.label(title).classes('native-wave-title').tooltip(origin)
+                title_label = ui.label(title).classes('native-wave-title')
+                title_label.props['title'] = origin
                 choice = ui.select(waves, value=selected if selected in files else waves[0], label='VCD').props('dense outlined options-dense').classes('native-wave-file')
                 ui.space()
                 load = ui.button(icon='refresh').props('flat dense').tooltip('Reload waveform')

@@ -144,7 +144,8 @@ class Studio:
                         and 'build' not in file.relative_to(self.ws.root).parts
                         and file.suffix.lower() in {'.sv', '.v', '.svh', '.vh', '.txt', '.md', '.json', '.vlt', '.mem', '.hex'})
             with self.tabs:
-                tab = ui.tab(path, label=file.name).tooltip(path)
+                tab = ui.tab(path, label=file.name)
+                tab.props['title'] = path
                 self.tab_labels[path] = tab
                 with tab:
                     self.add_tab_close(path)
@@ -155,7 +156,8 @@ class Studio:
                     with ui.column().classes('document-tab'):
                         with ui.row().classes('document-heading'):
                             description = path + (f' | Run {run.id}' if run else '')
-                            ui.label(description).classes('document-path').tooltip(description)
+                            path_label = ui.label(description).classes('document-path')
+                            path_label.props['title'] = description
                             ui.label('Editable' if editable else 'Read-only').classes('text-xs opacity-60')
                             ui.button(icon='download', on_click=lambda: ui.download.file(file)).props('flat dense').tooltip('Download file')
                         if file.suffix.lower() == '.svg':
@@ -391,7 +393,8 @@ class Studio:
                 if '/build/' not in artifact and not artifact.endswith('.log'):
                     continue
                 with ui.element('div').classes('studio-artifact'):
-                    ui.button(Path(artifact).name, on_click=lambda _, a=artifact: self.guard(lambda: self.open_artifact(run, a))).props('flat no-caps dense').classes('studio-artifact-name').tooltip(artifact)
+                    artifact_button = ui.button(Path(artifact).name, on_click=lambda _, a=artifact: self.guard(lambda: self.open_artifact(run, a))).props('flat no-caps dense').classes('studio-artifact-name')
+                    artifact_button.props['title'] = artifact
                     ui.button(icon='download', on_click=lambda _, a=artifact: ui.download.file(self.tools.artifact(run, a))).props('flat round dense')
                     if artifact.endswith('.svg'):
                         ui.button('View SVG', on_click=lambda _, a=artifact: self.view_svg(run, a)).props('flat dense')

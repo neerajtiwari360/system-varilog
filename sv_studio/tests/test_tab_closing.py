@@ -23,6 +23,8 @@ async def test_close_clean_file_reopen_and_close_last(studio, user, ws):
     with user:
         studio.open_file(first)
         studio.open_file(second)
+    assert studio.tab_labels[second].props['title'] == second
+    await user.should_not_see(kind=ui.tooltip, content=second)
     user.find(marker='close-tab-' + second).click()
     await asyncio.sleep(.02)
     assert studio.tabs.value == first
