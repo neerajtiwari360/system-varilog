@@ -56,7 +56,7 @@ def build_shell(s) -> None:
                                         ui.label('Open a source file to edit, or run a simulation to inspect waveforms.')
                             s.tabs.value = '__welcome__'
                     with vertical.after:
-                        with ui.element('section').classes('studio-console'):
+                        with ui.element('section').classes('studio-console').style('width:100%;min-width:0;max-width:100%;box-sizing:border-box'):
                             with ui.element('div').classes('studio-console-top'):
                                 ui.label('CONSOLE').classes('pane-title')
                                 s.search = ui.input('Search log', on_change=lambda _: s.filter_logs()).props('dense clearable')
@@ -65,7 +65,7 @@ def build_shell(s) -> None:
                                 ui.button(icon='download', on_click=lambda: ui.download.content(s.log_text, 'sv-studio.log')).props('flat round dense').tooltip('Export logs')
                                 ui.button(icon='clear_all', on_click=s.clear_logs).props('flat round dense').tooltip('Clear display')
                                 ui.button(icon='close', on_click=lambda: s.toggle_panel('console')).props('flat round dense').tooltip('Hide console')
-                            s.console = ui.log(max_lines=20000).classes('w-full')
+                            s.console = ui.log(max_lines=20000).props('visible').classes('w-full').style('width:100%;max-width:100%;min-width:0;flex:1 1 0;height:0')
             s.results_pane = ui.element('aside').classes('studio-side studio-results')
             with s.results_pane:
                 with ui.element('div').classes('studio-side-heading'):
