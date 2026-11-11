@@ -3,3 +3,9 @@ build/
 *.vcd
 *.vvp
 obj_dir/
+.venv/
+.uv-cache/
+.python/
+*.egg-info/
+__pycache__/
+.pytest_cache/

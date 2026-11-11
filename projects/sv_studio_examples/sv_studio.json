@@ -1,0 +1,8 @@
+{
+  "sources": ["rtl/designs.sv", "tb/checks.sv"],
+  "success": {
+    "tb_studio_and": "STUDIO_AND_COMPLETE",
+    "tb_studio_registered_and": "STUDIO_REGISTERED_COMPLETE",
+    "tb_studio_counter": "STUDIO_COUNTER_COMPLETE"
+  }
+}

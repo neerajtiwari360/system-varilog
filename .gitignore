@@ -40,3 +40,11 @@ Thumbs.db
 
 # VS Code local settings
 .vscode/
+# Local SV Studio environment and generated runs
+.venv/
+.uv-cache/
+.python/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+/build/
