@@ -51,7 +51,7 @@ docker compose build sim wave
    shows exact argv commands, exit codes, run identity, duration and diagnostics.
    Stop requests container removal as well as terminating the Docker client.
 5. Generate schematic uses Yosys synthesis and Graphviz, then **View SVG** opens
-   the generated gate-level diagram. The slider zooms, scrollbars pan, and Fit
+   the generated gate-level diagram in a central, closable tab. The slider zooms, scrollbars pan, and Fit
    restores container width. Download original SVG is available.
 6. After simulation, **Waveform** opens SV Studio's native canvas viewer in a
    **Waveform editor tab** and reads the selected run's VCD directly. It does not
@@ -71,6 +71,13 @@ docker compose build sim wave
 CodeMirror is NiceGUI's bundled editor; it supplies SystemVerilog highlighting,
 line numbers, indentation and Ctrl+F search/replace. Diagnostic buttons reveal
 source lines. This version does not bundle an external Monaco integration.
+All explorer files and run-artifact names open in the central tab area. Netlists,
+JSON, logs and source snapshots use read-only text views; SVGs use the schematic
+preview; VCD files use native waveform tabs. Opening the same path reuses its tab,
+while files from different runs keep separate tabs even when their names match.
+Each tab shows its full path and, for run artifacts, its run ID. Unsupported binary
+files show a download option in their tab. Source files remain editable with
+unsaved-change protection. Closing a tab does not delete its file.
 Waveform opens in a full-width focus layout, hiding explorer, run results and console.
 Use **Restore layout** to bring those panels back, or the folder/terminal/results
 buttons to toggle individual panels. **Focus** maximizes any active tab. The console
@@ -200,7 +207,8 @@ project configuration. Do not expose the server or Docker socket to a network.
   and choose an appropriate display unit; the cursor tooltip retains exact ticks.
   No assumptions about nanoseconds are made.
 * Buffers are session-local and unsaved tabs are not restored after a browser reload.
-  Run history is durable. Closing a tab within the IDE is not yet supported.
+  Run history is durable. Each file and waveform tab has an X close button. Unsaved
+  files offer Save and close, Discard changes or Cancel; save conflicts keep the tab open.
 * Large snapshots and result lists are not optimized; service source-copying may
   briefly block the event loop for very large projects. Log output is streamed in chunks.
 
@@ -248,4 +256,4 @@ without Developer Mode or the corresponding privilege.
   yourself or extend the frontend deliberately; the IDE never changes hardware behavior.
 
 Suggested next work: hierarchy-aware source management, inline diagnostic decorations,
-tab closing/recovery, larger-waveform streaming and module-level schematic navigation.
+unsaved-session recovery, larger-waveform streaming and module-level schematic navigation.

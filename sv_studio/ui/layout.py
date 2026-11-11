@@ -2,13 +2,14 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 
-from nicegui import ui
+from nicegui import background_tasks, ui
 
 from sv_studio.models import Run
 from sv_studio.services.tools import ToolService
 from sv_studio.services.workspace import Workspace
 from sv_studio.ui.waveform_viewer import WaveformViewer
 from sv_studio.ui.shell import build_shell
+from sv_studio.ui.document_viewer import language_for, svg_view
 
 
 class Studio:
@@ -22,6 +23,9 @@ class Studio:
         self.originals: dict[str, str] = {}
         self.editors: dict[str, object] = {}
         self.tab_labels: dict[str, object] = {}
+        self.tab_panels: dict[str, object] = {}
+        self.tab_order: list[str] = []
+        self.document_tasks: dict[str, asyncio.Task] = {}
         self.run_result: Run | None = None
         self.waveform_viewer: WaveformViewer | None = None
         self.log_text = ''
@@ -127,28 +131,131 @@ class Studio:
         self.update_history()
 
     def open_file(self, path: str, line: int | None = None) -> None:
-        if path not in self.buffers:
-            text = self.ws.read(path)
-            self.buffers[path] = self.originals[path] = text
+        self.open_document(path, line=line)
+
+    def open_document(self, path: str, *, line: int | None = None,
+                      run: Run | None = None, artifact: str | None = None) -> None:
+        file = self.ws.path(path)
+        if not file.is_file():
+            raise ValueError('File does not exist')
+        path = self.ws.relative(file)
+        if path not in self.tab_order:
+            editable = (file.is_relative_to(self.ws.path('projects'))
+                        and 'build' not in file.relative_to(self.ws.root).parts
+                        and file.suffix.lower() in {'.sv', '.v', '.svh', '.vh', '.txt', '.md', '.json', '.vlt', '.mem', '.hex'})
             with self.tabs:
-                tab = ui.tab(path, label='/'.join(Path(path).parts[-3:]))
+                tab = ui.tab(path, label=file.name).tooltip(path)
                 self.tab_labels[path] = tab
+                with tab:
+                    self.add_tab_close(path)
+            self.tab_order.append(path)
             with self.panels:
-                with ui.tab_panel(path).classes('p-0 h-full'):
-                    editor = ui.codemirror(text, language='SystemVerilog', theme='vscodeDark',
-                        keymap={'Ctrl-s': lambda _: self.save_all(), 'Meta-s': lambda _: self.save_all()},
-                        on_change=lambda e, p=path: self.changed(p, e.value)).classes('h-full w-full')
-                    self.editors[path] = editor
+                with ui.tab_panel(path).classes('p-0 h-full') as panel:
+                    self.tab_panels[path] = panel
+                    with ui.column().classes('document-tab'):
+                        with ui.row().classes('document-heading'):
+                            description = path + (f' | Run {run.id}' if run else '')
+                            ui.label(description).classes('document-path').tooltip(description)
+                            ui.label('Editable' if editable else 'Read-only').classes('text-xs opacity-60')
+                            ui.button(icon='download', on_click=lambda: ui.download.file(file)).props('flat dense').tooltip('Download file')
+                        if file.suffix.lower() == '.svg':
+                            svg_view(file)
+                        elif file.suffix.lower() in {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'}:
+                            with ui.scroll_area().classes('w-full flex-grow min-h-0'):
+                                ui.image(file).props('fit=contain').classes('w-full')
+                        elif file.suffix.lower() == '.vcd':
+                            viewer = WaveformViewer(self.tools)
+                            task = viewer.show(run, artifact) if run else viewer.show_file(file, path)
+                            self.document_tasks[path] = background_tasks.create(task)
+                        else:
+                            try:
+                                text = self.ws.read(path)
+                                if '\x00' in text or file.suffix.lower() in {'.vvp', '.fst', '.zip', '.gz', '.pdf'}:
+                                    raise ValueError('This file type has no inline preview. Download it to inspect it locally.')
+                            except (ValueError, UnicodeError) as e:
+                                ui.label(str(e)).classes('p-4 text-sm opacity-70')
+                            else:
+                                if editable:
+                                    self.buffers[path] = self.originals[path] = text
+                                editor = ui.codemirror(text, language=language_for(file), theme='vscodeDark',
+                                    keymap={'Ctrl-s': lambda _: self.save_all(), 'Meta-s': lambda _: self.save_all()},
+                                    on_change=(lambda e, p=path: self.changed(p, e.value)) if editable else None).classes('w-full flex-grow min-h-0')
+                                if not editable:
+                                    editor.disable()
+                                self.editors[path] = editor
         self.tabs.value = path
         self.annotate()
-        if line:
+        if line and path in self.editors:
             self.editors[path].reveal_line(line)
 
     def changed(self, path: str, text: str) -> None:
+        if path not in self.buffers:
+            return
         self.buffers[path] = text
         dirty = text != self.originals[path]
-        self.tab_labels[path].set_label('/'.join(Path(path).parts[-3:]) + (' *' if dirty else ''))
-        ui.run_javascript('window.svStudioDirty = ' + str(any(self.buffers[p] != self.originals[p] for p in self.buffers)).lower())
+        self.tab_labels[path].set_label(Path(path).name + (' *' if dirty else ''))
+        self.tabs.client.run_javascript('window.svStudioDirty = ' + str(any(self.buffers[p] != self.originals[p] for p in self.buffers)).lower())
+
+    def add_tab_close(self, path: str) -> None:
+        name = 'Waveform' if path == '__waveform__' else Path(path).name
+        button = ui.button(icon='close').props('flat round dense').classes('studio-tab-close').mark('close-tab-' + path)
+        button.props['aria-label'] = f'Close {name}'
+        button.tooltip(f'Close {name}')
+        button.on('click', lambda: self.close_tab(path), js_handler='(event) => { event.stopPropagation(); emit(); }')
+
+    def close_tab(self, path: str) -> None:
+        if path not in self.tab_order:
+            return
+        if path in self.buffers and self.buffers[path] != self.originals[path]:
+            with ui.dialog().props('persistent') as dialog, ui.card():
+                ui.label(f'Save changes to {Path(path).name}?').classes('text-base font-semibold')
+                ui.label('This file has unsaved edits.')
+                def save_and_close():
+                    if self.save_file(path):
+                        self.remove_tab(path)
+                        dialog.close()
+                def discard_and_close():
+                    self.remove_tab(path)
+                    dialog.close()
+                with ui.row():
+                    ui.button('Save and close', on_click=save_and_close)
+                    ui.button('Discard changes', on_click=discard_and_close).props('flat color=negative')
+                    ui.button('Cancel', on_click=dialog.close).props('flat')
+            dialog.open()
+        else:
+            self.remove_tab(path)
+
+    def remove_tab(self, path: str) -> None:
+        if path not in self.tab_order:
+            return
+        index = self.tab_order.index(path)
+        self.tab_order.remove(path)
+        if self.tabs.value == path:
+            self.tabs.value = self.tab_order[min(max(index - 1, 0), len(self.tab_order) - 1)] if self.tab_order else '__welcome__'
+        task = self.document_tasks.pop(path, None)
+        if task and not task.done():
+            task.cancel()
+        self.tab_panels.pop(path).delete()
+        self.tab_labels.pop(path).delete()
+        self.editors.pop(path, None)
+        self.buffers.pop(path, None)
+        self.originals.pop(path, None)
+        if path == '__waveform__':
+            self.waveform_viewer = None
+        self.tabs.client.run_javascript('window.svStudioDirty = ' + str(any(self.buffers[p] != self.originals[p] for p in self.buffers)).lower())
+
+    def save_file(self, path: str) -> bool:
+        try:
+            if self.buffers[path] != self.originals[path]:
+                if self.ws.read(path) != self.originals[path]:
+                    raise ValueError(f'{path} changed on disk. Reconcile changes before saving.')
+                self.ws.save(path, self.buffers[path])
+                self.originals[path] = self.buffers[path]
+                self.changed(path, self.buffers[path])
+            return True
+        except (ValueError, OSError) as e:
+            ui.notify(str(e), type='negative')
+            return False
 
     def save_all(self) -> bool:
         try:
@@ -284,7 +391,7 @@ class Studio:
                 if '/build/' not in artifact and not artifact.endswith('.log'):
                     continue
                 with ui.element('div').classes('studio-artifact'):
-                    ui.label(Path(artifact).name).classes('studio-artifact-name').tooltip(artifact)
+                    ui.button(Path(artifact).name, on_click=lambda _, a=artifact: self.guard(lambda: self.open_artifact(run, a))).props('flat no-caps dense').classes('studio-artifact-name').tooltip(artifact)
                     ui.button(icon='download', on_click=lambda _, a=artifact: ui.download.file(self.tools.artifact(run, a))).props('flat round dense')
                     if artifact.endswith('.svg'):
                         ui.button('View SVG', on_click=lambda _, a=artifact: self.view_svg(run, a)).props('flat dense')
@@ -297,27 +404,14 @@ class Studio:
                                     if d['file'] == path and d['line']} if self.run_result else {}
 
     def inspect(self, run: Run, artifact: str) -> None:
-        with ui.dialog() as dialog, ui.card().classes('w-[90vw] max-w-none'):
-            ui.label(artifact)
-            ui.code(self.tools.artifact(run, artifact).read_text(encoding='utf-8'), language='verilog' if artifact.endswith('.v') else 'json').classes('w-full max-h-[75vh] overflow-auto')
-            ui.button('Close', on_click=dialog.close)
-        dialog.open()
+        self.open_artifact(run, artifact)
 
     def view_svg(self, run: Run, artifact: str) -> None:
-        with ui.dialog() as dialog, ui.card().classes('w-[95vw] max-w-none'):
-            ui.label(f'{run.rtl_top} • synthesized gate-level • {run.id}')
-            scale = {'value': 100}
-            with ui.row():
-                ui.button('Download original SVG', on_click=lambda: ui.download.file(self.tools.artifact(run, artifact)))
-                ui.button('Fit', on_click=lambda: zoom.set_value(100))
-                ui.button('Close', on_click=dialog.close)
-            ui.label('Zoom with slider; drag scrollbars to pan.')
-            zoom = ui.slider(min=25, max=500, value=100).classes('w-full')
-            with ui.scroll_area().classes('w-full h-[70vh]'):
-                # ui.image serves a local file as an image: SVG scripts cannot execute inline.
-                picture = ui.image(self.tools.artifact(run, artifact)).classes('max-w-none').style('width:100%')
-                zoom.on_value_change(lambda e: picture.style(f'width:{e.value}%'))
-        dialog.open()
+        self.open_artifact(run, artifact)
+
+    def open_artifact(self, run: Run, artifact: str) -> None:
+        file = self.tools.artifact(run, artifact)
+        self.open_document(self.ws.relative(file), run=run, artifact=artifact)
 
     def waveform_run(self) -> Run | None:
         if self.run_result and self.run_result.operation == 'simulation' and self.run_result.project == self.project:
@@ -337,9 +431,14 @@ class Studio:
             return
         if self.waveform_viewer is None:
             with self.tabs:
-                ui.tab('__waveform__', label='Waveform', icon='show_chart')
+                tab = ui.tab('__waveform__', label='Waveform', icon='show_chart')
+                self.tab_labels['__waveform__'] = tab
+                with tab:
+                    self.add_tab_close('__waveform__')
+            self.tab_order.append('__waveform__')
             with self.panels:
-                with ui.tab_panel('__waveform__').classes('p-0 h-full'):
+                with ui.tab_panel('__waveform__').classes('p-0 h-full') as panel:
+                    self.tab_panels['__waveform__'] = panel
                     self.waveform_viewer = WaveformViewer(self.tools)
         self.tabs.value = '__waveform__'
         self.set_focus(True)

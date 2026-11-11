@@ -133,7 +133,8 @@ async def test_real_ui_tool_buttons(user):
     await asyncio.sleep(.1)
     await user.should_see('Zoom with slider; drag scrollbars to pan.')
     # Native waveform remains accessible after synthesis/schematic, with no viewer process.
-    user.find('Close').click()
+    with user:
+        studio.close_tab(studio.tabs.value)
     user.find('Waveform').click()
     try:
         for _ in range(1200):

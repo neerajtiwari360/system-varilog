@@ -101,7 +101,8 @@ async def test_streaming_stress_through_studio(user):
     user.find('View SVG').click()
     await asyncio.sleep(.05)
     await user.should_see('Zoom with slider; drag scrollbars to pan.')
-    user.find('Close').click()
+    with user:
+        studio.close_tab(studio.tabs.value)
     schematic = await click_operation('Generate schematic', 'schematic')
     assert schematic.status == 'Passed' and schematic.id != synthesis.id
     assert ET.parse(tools.artifact(schematic, 'work/build/schematic.svg')).getroot().tag.endswith('svg')

@@ -1,4 +1,5 @@
 """Native VCD waveform view; no external viewer process or iframe."""
+from pathlib import Path
 from nicegui import run as background, ui
 
 from sv_studio.models import Run
@@ -21,21 +22,28 @@ class WaveformViewer:
                 ui.icon('show_chart', size='28px')
                 ui.label(message).classes('waveform-state-message')
 
-    async def show(self, run: Run) -> None:
+    async def show(self, run: Run, selected: str | None = None) -> None:
+        files = {a: self.tools.artifact(run, a) for a in run.artifacts if a.endswith('.vcd')}
+        await self.show_files(files, run.tb_top, f'{run.status} | Run {run.id}', selected)
+
+    async def show_file(self, file: Path, label: str) -> None:
+        await self.show_files({file.name: file}, file.name, label, file.name)
+
+    async def show_files(self, files: dict[str, Path], title: str, origin: str, selected: str | None) -> None:
         self.container.clear()
         self.canvas = None
-        waves = [a for a in run.artifacts if a.endswith('.vcd')]
+        waves = list(files)
         with self.container:
             if not waves:
                 ui.label('No waveform generated for this simulation run.').classes('text-warning')
                 ui.label('Add $dumpfile and $dumpvars to the testbench, then run Simulation again.')
                 return
             with ui.element('div').classes('native-wave-heading'):
-                ui.label(run.tb_top).classes('native-wave-title').tooltip(f'{run.project} • Run {run.id}')
-                choice = ui.select(waves, value=waves[0], label='VCD').props('dense outlined options-dense').classes('native-wave-file')
+                ui.label(title).classes('native-wave-title').tooltip(origin)
+                choice = ui.select(waves, value=selected if selected in files else waves[0], label='VCD').props('dense outlined options-dense').classes('native-wave-file')
                 ui.space()
                 load = ui.button(icon='refresh').props('flat dense').tooltip('Reload waveform')
-                ui.button(icon='download', on_click=lambda: ui.download.file(self.tools.artifact(run, choice.value))).props('flat dense').tooltip('Download VCD')
+                ui.button(icon='download', on_click=lambda: ui.download.file(files[choice.value])).props('flat dense').tooltip('Download VCD')
             message = ui.label('Reading simulation waveform…').classes('native-wave-info')
             viewport = ui.column().classes('native-wave-viewport')
 
@@ -45,14 +53,14 @@ class WaveformViewer:
             load.disable()
             choice.disable()
             try:
-                path = self.tools.artifact(run, choice.value)
+                path = files[choice.value]
                 data = await background.io_bound(read_vcd, path)
-                if viewport.is_deleted:
+                if data is None or viewport.is_deleted:
                     return
                 with viewport:
                     self.canvas = WaveformCanvas(data.to_dict()).classes('w-full h-full')
-                message.set_text(f'{run.status} • {len(data.signals)} signals • Run {run.id}')
-                message.tooltip(f'{choice.value} • Duration {data.end} × {data.timescale}')
+                message.set_text(f'{len(data.signals)} signals | {origin}')
+                message.props['title'] = f'{choice.value} • Duration {data.end} × {data.timescale}'
             except (ValueError, OSError, UnicodeError) as e:
                 if not message.is_deleted:
                     message.set_text(f'Cannot display waveform: {e}')
