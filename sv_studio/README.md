@@ -130,6 +130,8 @@ Its manifest configures explicit completion markers. Existing examples were not 
   applies per-process timeouts (120 seconds by default) and removes cancelled containers.
 * `services/tools.py` orchestrates compile/runtime/lint/synthesis and manages immutable
   run snapshots, metadata, artifacts and the viewer lifecycle.
+* `services/netlist.py` counts instantiated leaf cells across the selected hierarchy,
+  including repeated module instances, while excluding unused modules.
 * `models.py` defines serializable run metadata without a frontend dependency.
 * `services/vcd.py` reads bounded VCD files off the UI event loop, preserving scopes,
   aliases, widths, X/Z values and integer time ticks.
@@ -173,7 +175,8 @@ project configuration. Do not expose the server or Docker socket to a network.
   interfaces/classes or verification constructs produce an error; sources are never
   transformed silently. Testbench modules must remain outside RTL directories.
 * Statistics come from the actual generic synthesized JSON netlist and retain raw
-  cell type names. They are **not KV260 LUT/FF/BRAM utilization**, placement results
+  cell type names. Counts include instantiated child modules, rather than just cells
+  directly in the top module. They are **not KV260 LUT/FF/BRAM utilization**, placement results
   or timing closure. Mapped memories may be flattened into logic by generic synthesis.
 * Candidate discovery is lexical, not a full macro preprocessor or language server.
   Manual top selection can enter an identifier absent from the dropdown, provided

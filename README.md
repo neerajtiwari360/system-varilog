@@ -20,6 +20,7 @@ system-varilog/
 |-- build/sv_studio/                # Independent IDE run snapshots and outputs
 `-- projects/
     |-- sv_studio_examples/        # Additional self-checking IDE examples
+    |-- 02_streaming_stress/       # Hierarchical ALU/pipeline/FIFO stress regression
     `-- 01_logic_gates/
         |-- README.md              # Design descriptions and testbench names
         |-- rtl/                   # Synthesizable .sv modules
@@ -167,3 +168,4 @@ Generic synthesis produces a logical netlist and schematic. It does not produce 
 
 - [SV Studio: detailed application guide](sv_studio/README.md)
 - [Implementation and validation record](sv_studio/VALIDATION.md)
+- [Streaming stress project and acceptance checks](projects/02_streaming_stress/README.md)

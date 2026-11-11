@@ -1,0 +1,4 @@
+{
+  "sources": ["rtl/stress_alu.sv", "rtl/stress_fifo.sv", "rtl/streaming_engine.sv", "tb/tb_stress_engine.sv", "tb/tb_stress_expected_failure.sv"],
+  "success": {"tb_stress_engine": "STRESS_ENGINE_ALL_CHECKS_COMPLETE"}
+}

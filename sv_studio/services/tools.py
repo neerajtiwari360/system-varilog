@@ -9,6 +9,7 @@ from typing import Callable
 from sv_studio.models import Run, now
 from sv_studio.services.runner import DockerRunner, ToolError
 from sv_studio.services.workspace import Workspace, IDENTIFIER
+from sv_studio.services.netlist import leaf_cell_counts
 
 
 class ToolService:
@@ -162,12 +163,10 @@ class ToolService:
                 if code:
                     raise ToolError('Yosys/Graphviz failed. The installed read_verilog -sv frontend supports a subset of SystemVerilog; source was not modified.')
                 netlist = json.loads((snapshot / 'build/netlist.json').read_text())
-                for cell in netlist['modules'][top].get('cells', {}).values():
-                    kind = cell['type']
-                    run.statistics[kind] = run.statistics.get(kind, 0) + 1
+                run.statistics = leaf_cell_counts(netlist['modules'], top)
                 if not (snapshot / 'build/schematic.svg').is_file():
                     raise ToolError('No SVG was generated')
-                run.status, run.detail = 'Passed', 'Generic synthesis cells; not device utilization or timing closure'
+                run.status, run.detail = 'Passed', 'Generic leaf cells across the selected hierarchy; not device utilization or timing closure'
         except (ToolError, OSError, ValueError, KeyError) as e:
             run.status = 'Cancelled' if self.runner.cancelled and 'timed out' not in str(e) else 'Failed'
             run.detail = str(e)
@@ -175,7 +174,9 @@ class ToolService:
         finally:
             for p in directory.glob('*.log'):
                 for line in p.read_text(encoding='utf-8').splitlines():
-                    severity = 'warning' if re.search(r'warning', line, re.I) else 'error' if re.search(r'error|fatal', line, re.I) else None
+                    warning = re.search(r'%Warning\b|\bwarning\s*:', line, re.I)
+                    error = re.search(r'%Error\b|\b(?:error|fatal)\s*:|:\s*syntax error\b|^\s*FAIL(?:ED)?\b', line, re.I)
+                    severity = 'warning' if warning else 'error' if error else None
                     if severity:
                         location = re.search(r'([\w./-]+\.(?:sv|v)):(\d+)', line)
                         run.diagnostics.append({'severity': severity, 'message': line,

@@ -51,3 +51,13 @@ function viewer() {
   state.selected=Array.from({length:70},(_,i)=>String(i));state.limitSelection();assert.equal(state.selected.length,64);
 }
 export const result = '4 native waveform drawing/interaction checks passed';
+
+export function checkStressWaveform(data) {
+  const {state,strokes,texts}=viewer();state.data=data;
+  state.selected=data.signals.slice(0,12).map(s=>s.name);state.span=data.end;
+  state.draw();
+  assert(strokes.length>100,'real stress dump should draw many transitions');
+  assert(texts.some(t=>String(t[0]).includes('us')),'stress time axis should use microseconds');
+  state.cursor=100000000;state.draw();
+  return {signals:state.visible.length,strokes:strokes.length,end:state.timeLabel(data.end)};
+}

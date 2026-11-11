@@ -1,0 +1,10 @@
+{
+  "success": {
+    "tb_and_gate": "PASS: All AND gate tests passed",
+    "tb_or_gate": "PASS: All OR gate tests passed",
+    "tb_not_gate": "All NOT gate tests PASSED!",
+    "tb_registered_and": "PASS: Reset, enable and AND tests",
+    "tb_registered_io_and": "PASS: All AND tests completed",
+    "tb_registered_io_en_rst_and": "PASS: All tests completed"
+  }
+}

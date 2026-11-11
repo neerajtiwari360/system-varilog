@@ -4,7 +4,7 @@ Validated locally on Windows on 11 November 2026.
 
 ## Results
 
-* Unit and NiceGUI simulated-client suite: **25 passed** after the waveform lifecycle fix.
+* Unit and NiceGUI simulated-client suite: **28 passed** including hierarchy-count regressions.
 * Regression coverage now reruns simulation while the Waveform tab is active,
   checks the running message, verifies automatic refresh to the new run and confirms
   that a missing VCD replaces old traces with an explanation. Tab transitions are
@@ -48,6 +48,12 @@ Validated locally on Windows on 11 November 2026.
 * Python compilation and `git diff --check` passed.
 
 ## Remaining verification limits
+
+The larger streaming ALU/pipeline/FIFO acceptance project is documented in
+[its validation report](../projects/02_streaming_stress/VALIDATION.md). It exercises
+all tool actions using real containers, native waveform data/drawing, post-synthesis
+simulation and an intentional failure. It exposed and fixed hierarchy undercounting
+in resource statistics and duplicate counting of Verilator warning-help lines.
 
 Pixel-level browser layout inspection was blocked by the unavailable browser
 automation host and a minimized Edge window. No claim is made that GTKWave's

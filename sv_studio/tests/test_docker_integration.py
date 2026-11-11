@@ -30,7 +30,7 @@ async def test_real_examples():
         assert any(a.endswith('.svg') for a in synth.artifacts)
     # Legacy example includes $readmemb("tb/inputs.txt"); snapshot must preserve it.
     legacy = await tools.run('01_logic_gates', 'simulation', 'registered_io_and', 'tb_registered_io_and', ws.sources('01_logic_gates'))
-    assert legacy.status == 'Warning', legacy.detail  # no success criteria configured
+    assert legacy.status == 'Passed', legacy.detail  # project completion marker configured
     log = tools.artifact(legacy, 'simulation.log').read_text()
     assert 'PASS: All AND tests completed' in log
     assert 'Unable to open' not in log

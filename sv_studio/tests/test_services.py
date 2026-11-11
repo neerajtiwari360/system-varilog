@@ -83,7 +83,7 @@ class FixtureRunner(DockerRunner):
             if self.scenario != 'no_vcd':
                 (cwd / 'build/waves.vcd').write_text('$timescale 1ns $end\n$scope module bench $end\n$var wire 1 ! clk $end\n$upscope $end\n$enddefinitions $end\n#0\n0!\n#5\n1!\n#10\n0!')
         if stage == 'verilator' and '--lint-only' in args:
-            text = '%Warning-WIDTH: rtl/unrelated_name.sv:2: width mismatch\n'
+            text = '%Warning-WIDTH: rtl/unrelated_name.sv:2: width mismatch\n ... For warning description see https://verilator.org/warn/WIDTH\n'
         if stage == 'yosys' and '-s' in args:
             if self.scenario == 'synth_error': code, text = 1, 'ERROR: unsupported syntax'
             else:
@@ -138,6 +138,7 @@ async def test_lint_and_synthesis(ws):
     _, lint = await invoke(ws, operation='lint')
     assert lint.status == 'Warning'
     assert lint.diagnostics[0]['line'] == 2
+    assert len(lint.diagnostics) == 1
     assert not any('/tb/' in s for s in lint.sources)
     _, synth = await invoke(ws, operation='synthesis')
     assert synth.status == 'Passed'

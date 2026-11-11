@@ -38,3 +38,15 @@ The shared synthesis target generates generic logic. Device-specific KV260 mappi
 ## Adding another design
 
 Follow [Adding a new RTL design and testbench](../../README.md#adding-a-new-rtl-design-and-testbench). Keep the `<module>` / `tb_<module>` naming convention and choose a unique `build/<module>.vcd` filename.
+
+## SV Studio simulation status
+
+`sv_studio.json` maps each testbench to its final completion message. Studio reports
+**Passed** only after that message is observed, the simulator exits successfully,
+and no failure is reported. Individual per-vector PASS messages are not used as
+the completion criterion. Add a final marker to this mapping when adding a testbench.
+
+If an earlier run shows **Warning** despite printing PASS, rerun Simulation after
+the configuration update. Configuration is read on every run; no server restart
+is needed. Saved run history keeps its original status. An unconfigured testbench
+continues to show Warning because exit code zero alone does not establish success.
